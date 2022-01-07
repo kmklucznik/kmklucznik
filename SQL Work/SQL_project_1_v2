@@ -1,0 +1,180 @@
+Deforestation Project: SQL Project 1
+
+
+VIEW: 
+CREATE VIEW forestation AS
+SELECT reg.country_name
+	,f.year
+	,f.forest_area_sqkm
+      ,lan.total_area_sq_mi
+	,f.forest_area_sqkm/(lan.total_area_sq_mi*1.60934) AS forest_per_land
+FROM regions reg
+JOIN land_area lan
+ON reg.country_name=lan.country_name
+JOIN forest_area f
+ON lan.country_name=f.country_name AND lan.year=f.year
+
+
+
+Question 1, Part 1: World Forest Area Sq KM
+
+SELECT f.country_name
+    ,f.forest_area_sqkm AS sqkm_2016
+    ,f2.forest_area_sqkm AS sqkm_1990
+    ,f2.forest_area_sqkm - f.forest_area_sqkm as diff_sqkm
+    ,((f2.forest_area_sqkm - f.forest_area_sqkm)/f2.forest_area_sqkm)*100 AS percent_diff
+FROM forest_area f
+JOIN forest_area f2
+ON f.country_name=f2.country_name AND f2.year=1990
+WHERE f.country_code= 'WLD' AND f.year='2016'                                                         
+
+Question 1, Part 2: Forest Area Sq Km v Land Area Sq Km
+
+SELECT country_name
+	,year
+	,total_area_sq_mi *1.60934 AS total_area_sqkm
+FROM land_area
+WHERE year='2016' AND total_area_sq_mi *1.60934<='1324449'
+ORDER BY total_area_sq_mi *1.60934 DESC
+LIMIT 1
+
+Question 2 
+
+SELECT region
+	, year
+    ,(forest_area_sqkm/total_area_sqkm)*100 as percent_forest
+FROM (SELECT r.region
+		,f.year
+		,SUM(f.forest_area_sqkm) OVER (region_year) as forest_area_sqkm
+    		,SUM(l.total_area_sq_mi*1.60934) OVER (region_year) AS total_area_sqkm
+	FROM regions r
+	JOIN forest_area f
+	ON r.country_name=f.country_name
+	JOIN land_area l 
+	ON f.country_name=l.country_name AND f.year=l.year
+    WINDOW region_year AS (PARTITION BY region ORDER BY f.year)) t1
+WHERE year='2016' OR year='1990'
+GROUP BY t1.region, t1.year, t1.forest_area_sqkm, t1.total_area_sqkm
+ORDER BY year DESC
+		,(forest_area_sqkm/total_area_sqkm)*100 DESC
+
+
+Question 3 Part A.1
+
+SELECT f.country_name
+    ,f.forest_area_sqkm AS sqkm_1990
+    ,f2.forest_area_sqkm AS sqkm_2016
+    ,f2.forest_area_sqkm - f.forest_area_sqkm as diff_sqkm
+    ,((f2.forest_area_sqkm - f.forest_area_sqkm)/f2.forest_area_sqkm)*100 AS percent_diff
+FROM forest_area f
+JOIN forest_area f2
+ON f.country_name=f2.country_name AND f.year=1990 AND f2.year=2016
+WHERE f.forest_area_sqkm IS NOT NULL AND f2.forest_area_sqkm  IS NOT NULL
+ORDER BY f2.forest_area_sqkm - f.forest_area_sqkm DESC
+LIMIT 2
+
+Question 3 Part A.2
+
+SELECT f.country_name
+    ,f.forest_area_sqkm AS sqkm_1990
+    ,f2.forest_area_sqkm AS sqkm_2016
+    ,f2.forest_area_sqkm - f.forest_area_sqkm as diff_sqkm
+    ,((f2.forest_area_sqkm - f.forest_area_sqkm)/f2.forest_area_sqkm)*100 AS percent_diff
+FROM forest_area f
+JOIN forest_area f2
+ON f.country_name=f2.country_name AND f.year=1990 AND f2.year=2016
+WHERE f.forest_area_sqkm IS NOT NULL AND f2.forest_area_sqkm  IS NOT NULL
+ORDER BY (f2.forest_area_sqkm / f.forest_area_sqkm)*100 DESC
+LIMIT 1
+
+Question 3 Part B.1
+
+SELECT f.country_name
+	,r.region
+    ,f.forest_area_sqkm AS sqkm_2016
+    ,f2.forest_area_sqkm AS sqkm_1990
+    ,f2.forest_area_sqkm - f.forest_area_sqkm as diff_sqkm
+    ,((f2.forest_area_sqkm - f.forest_area_sqkm)/f2.forest_area_sqkm)*100 AS percent_diff
+FROM forest_area f
+JOIN forest_area f2
+ON f.country_name=f2.country_name AND f.year=2016 AND f2.year=1990
+JOIN regions r
+ON f.country_name=r.country_name
+WHERE f.forest_area_sqkm IS NOT NULL AND f2.forest_area_sqkm  IS NOT NULL 
+ORDER BY f2.forest_area_sqkm - f.forest_area_sqkm DESC
+LIMIT 6
+
+Question 3 Part B.2
+SELECT f.country_name
+	,r.region
+    ,f.forest_area_sqkm AS sqkm_2016
+    ,f2.forest_area_sqkm AS sqkm_1990
+    ,f2.forest_area_sqkm - f.forest_area_sqkm as diff_sqkm
+    ,((f2.forest_area_sqkm - f.forest_area_sqkm)/f2.forest_area_sqkm)*100 AS percent_diff
+FROM forest_area f
+JOIN forest_area f2
+ON f.country_name=f2.country_name AND f.year=2016 AND f2.year=1990
+JOIN regions r
+ON f.country_name=r.country_name
+WHERE f.forest_area_sqkm IS NOT NULL AND f2.forest_area_sqkm  IS NOT NULL 
+ORDER BY (f2.forest_area_sqkm / f.forest_area_sqkm)*100 DESC
+LIMIT 5
+     
+Question 3 Part C.1
+
+WITH t1 as
+(SELECT l.country_name
+		,f.forest_area_sqkm
+    		,l.total_area_sq_mi*1.60934 AS total_area_sqkm
+    		, (f.forest_area_sqkm/(l.total_area_sq_mi*1.60934))*100 as percent_forest
+	FROM land_area l 
+	JOIN forest_area f
+	ON l.country_name=f.country_name AND l.year=f.year
+	WHERE l.year ='2016' AND l.total_area_sq_mi IS NOT NULL AND f.forest_area_sqkm IS NOT NULL
+    ORDER BY (f.forest_area_sqkm/(l.total_area_sq_mi*1.60934))*100 DESC)
+
+SELECT forest_quartile
+       ,COUNT(country_name)
+FROM (SELECT country_name
+		,CASE
+			WHEN percent_forest <= 25 THEN 'Q4'
+    		WHEN percent_forest > 25 AND percent_forest <= 50 THEN 'Q3'
+    		WHEN percent_forest > 50 AND percent_forest <= 75 THEN 'Q2'
+    		ELSE 'Q1' END AS forest_quartile
+		FROM t1)t2
+GROUP BY t2.forest_quartile
+                                 
+
+ 
+Question 3 Part C.2
+
+WITH t1 as
+	(SELECT l.country_name
+		,f.forest_area_sqkm
+    		,l.total_area_sq_mi*1.60934 AS total_area_sqkm
+    		, (f.forest_area_sqkm/(l.total_area_sq_mi*1.60934))*100 as percent_forest
+	FROM land_area l 
+	JOIN forest_area f
+	ON l.country_name=f.country_name AND l.year=f.year
+	WHERE l.year ='2016' AND l.total_area_sq_mi IS NOT NULL AND f.forest_area_sqkm IS NOT NULL
+    ORDER BY (f.forest_area_sqkm/(l.total_area_sq_mi*1.60934))*100 DESC)
+
+SELECT t1.country_name
+        ,r.region
+        ,t1.percent_forest
+		,CASE
+			WHEN t1.percent_forest <= 25 THEN 'Q4'
+    		WHEN t1.percent_forest > 25 AND t1.percent_forest <= 50 THEN 'Q3'
+    		WHEN t1.percent_forest > 50 AND t1.percent_forest <= 75 THEN 'Q2'
+    		ELSE 'Q1' END AS forest_quartile
+FROM t1
+JOIN regions r
+ON t1.country_name=r.country_name
+WHERE percent_forest > 75
+
+
+
+     
+     
+
+
